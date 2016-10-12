@@ -1,0 +1,9 @@
+[JunosSpace]
+username = admin
+password = yourpassword
+baseUri = https://space.example.com/api/space/
+
+[device42]
+username = admin
+password = yourpassword
+baseUri = https://device42.example.com
