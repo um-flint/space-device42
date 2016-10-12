@@ -61,6 +61,18 @@ def main():
         r = requests.post(device42Uri+'/api/device/',data=sysdata,headers=dsheaders)
         #print r
         #print r.text
+        
+        #Add the management IP for the switch
+        ipdata = {}
+        ipdata.update({'ipaddress': device['ipAddr']})
+        #look up the device by serial number incase it already exists with a different name
+        r=requests.get(device42Uri+'/api/1.0/devices/serial/'+sysdata['serial_no']+'/',headers=dsheaders)
+        existingname = r.json()['name']
+        ipdata.update({'device': existingname})
+        #print 'Attempting to add IP info to Device42'
+        r=requests.post(device42Uri+'/api/1.0/ips/',data=ipdata,headers=dsheaders)
+        #print r
+        #print r.text
 
         serviceNowDevice = filter(lambda x: x['serialNumber'] == device['serialNumber'], serviceNowDevices)
         if serviceNowDevice is not []:
