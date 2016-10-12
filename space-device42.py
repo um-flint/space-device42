@@ -21,6 +21,19 @@ def processDevice(device):
 
     return sysdata
 
+def processContract(deviceContract,serialNumber):
+    contractdata = {}
+    contractdata.update({'order_no': 'Juniper Care - ' + deviceContract['contractAgreementNumber']})
+    contractdata.update({'line_type': 'Contract'})
+    contractdata.update({'line_contract_type': 'Juniper Care'})
+    contractdata.update({'line_service_type': deviceContract['contractSKU']})
+    contractdata.update({'line_contract_id': deviceContract['contractAgreementNumber']})
+    contractdata.update({'line_start_date': deviceContract['contractStartDate'].split()[0]})
+    contractdata.update({'line_end_date': deviceContract['contractEndDate'].split()[0]})
+    contractdata.update({'line_device_serial_nos': serialNumber})
+
+    return contractdata
+
 def main():
     config = ConfigParser.ConfigParser()
     config.readfp(open('space-device42.cfg'))
@@ -76,10 +89,21 @@ def main():
 
         serviceNowDevice = filter(lambda x: x['serialNumber'] == device['serialNumber'], serviceNowDevices)
         if serviceNowDevice is not []:
-            deviceContract=requests.get(spaceUri+'/api/juniper/servicenow/device-management/devices/' + serviceNowDevice[0]['@key']+ '/viewContractInformation',headers=spaceheaders,verify=False)
-            if deviceContract.status_code == 200:
-                print json.dumps(deviceContract.json()['deviceContracts']['deviceContract'], indent=4, sort_keys=True)
-
+            deviceContracts=requests.get(spaceUri+'/api/juniper/servicenow/device-management/devices/' + serviceNowDevice[0]['@key']+ '/viewContractInformation',headers=spaceheaders,verify=False)
+            if deviceContracts.status_code == 200:
+                if type(deviceContracts.json()['deviceContracts']['deviceContract']) is list:
+                    for contract in deviceContracts.json()['deviceContracts']['deviceContract']:
+                        contractdata = processContract(contract, sysdata['serial_no'])
+                        #print json.dumps(contractdata, indent=4, sort_keys=True)
+                        r = requests.post(device42Uri+'/api/1.0/purchases/',data=contractdata,headers=dsheaders)
+                        #print r
+                        #print r.text
+                else:
+                    contractdata = processContract(deviceContracts.json()['deviceContracts']['deviceContract'], sysdata['serial_no'])
+                    #print json.dumps(contractdata, indent=4, sort_keys=True)
+                    r = requests.post(device42Uri+'/api/1.0/purchases/',data=contractdata,headers=dsheaders)
+                    #print r
+                    #print r.text
 
     return
 
