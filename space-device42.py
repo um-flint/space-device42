@@ -36,6 +36,16 @@ def processContract(deviceContract,serialNumber):
 
     return contractdata
 
+#Print OK if upload was sucessful - otherwise display response received
+def processReturnCode(r):
+    if r.status_code == 200:
+        print '  OK'
+    else:
+        print '  Error,',r
+        print ' ', r.text
+    
+    return
+
 def main():
     #Parse the config file
     config = ConfigParser.ConfigParser()
@@ -73,12 +83,11 @@ def main():
     spaceheaders.update({'Accept': 'application/vnd.juniper.servicenow.device-management.device-contracts+json;version=1'})
 
     for device in devices:
-        #print 'Processing switch named ' + device['name']
+        print 'Processing switch named', device['name']
         sysdata = processDevice(device)
-        #print 'Attempting to add to Device42'
+        print ' Attempting to add hardware to Device42'
         r = requests.post(device42Uri+'/api/device/',data=sysdata,headers=dsheaders)
-        #print r
-        #print r.text
+        processReturnCode(r)
         
         #Add the management IP for the switch
         ipdata = {}
@@ -87,10 +96,9 @@ def main():
         r=requests.get(device42Uri+'/api/1.0/devices/serial/'+sysdata['serial_no']+'/',headers=dsheaders)
         existingname = r.json()['name']
         ipdata.update({'device': existingname})
-        #print 'Attempting to add IP info to Device42'
+        print ' Attempting to add IP info to Device42'
         r=requests.post(device42Uri+'/api/1.0/ips/',data=ipdata,headers=dsheaders)
-        #print r
-        #print r.text
+        processReturnCode(r)
 
         #Match the contracts up to the devices
         serviceNowDevice = filter(lambda x: x['serialNumber'] == device['serialNumber'], serviceNowDevices)
@@ -100,16 +108,18 @@ def main():
                 if type(deviceContracts.json()['deviceContracts']['deviceContract']) is list:
                     for contract in deviceContracts.json()['deviceContracts']['deviceContract']:
                         contractdata = processContract(contract, sysdata['serial_no'])
+                        print ' Attempting to add contract', contract['contractAgreementNumber'], 'to Device42'
                         #print json.dumps(contractdata, indent=4, sort_keys=True)
                         r = requests.post(device42Uri+'/api/1.0/purchases/',data=contractdata,headers=dsheaders)
-                        #print r
-                        #print r.text
+                        processReturnCode(r)
+
                 else:
                     contractdata = processContract(deviceContracts.json()['deviceContracts']['deviceContract'], sysdata['serial_no'])
+                    print ' Attempting to add contract', deviceContracts.json()['deviceContracts']['deviceContract']['contractAgreementNumber'], 'to Device42'
                     #print json.dumps(contractdata, indent=4, sort_keys=True)
                     r = requests.post(device42Uri+'/api/1.0/purchases/',data=contractdata,headers=dsheaders)
-                    #print r
-                    #print r.text
+                    processReturnCode(r)
+        print
 
     return
 
