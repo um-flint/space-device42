@@ -8,6 +8,9 @@ import ConfigParser
 # Parse the data about a device from Space and convert it to Device42 format
 def processDevice(device):
     sysdata = {}
+    
+    #List of models that have card slots so consider them blade chassis in device42
+    #Could change over time/be different across environments
     bladeHosts=['EX8208']
     
     sysdata.update({'name': device['name']})
