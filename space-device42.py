@@ -5,6 +5,7 @@ import json
 import base64
 import ConfigParser
 
+# Parse the data about a device from Space and convert it to Device42 format
 def processDevice(device):
     sysdata = {}
     bladeHosts=['EX8208']
@@ -21,6 +22,7 @@ def processDevice(device):
 
     return sysdata
 
+# Parse the data about a contract from Space and convert it to Device42 format
 def processContract(deviceContract,serialNumber):
     contractdata = {}
     contractdata.update({'order_no': 'Juniper Care - ' + deviceContract['contractAgreementNumber']})
@@ -35,6 +37,7 @@ def processContract(deviceContract,serialNumber):
     return contractdata
 
 def main():
+    #Parse the config file
     config = ConfigParser.ConfigParser()
     config.readfp(open('space-device42.cfg'))
     spaceusername = config.get('JunosSpace','username')
@@ -44,8 +47,10 @@ def main():
     d42password = config.get('device42','password')
     device42Uri = config.get('device42','baseUri')
 
+    #Default headers for Junos Space
     spaceheaders = {'Authorization': 'Basic ' + base64.b64encode(spaceusername+ ':' + spacepassword)}
 
+    #Default headers for Device42
     dsheaders = {'Authorization': 'Basic ' + base64.b64encode(d42username + ':' + d42password), 'Content-Type': 'application/x-www-form-urlencoded'}
 
     #Get device info
@@ -63,8 +68,8 @@ def main():
     serviceNowDevices = [ x for x in r.json()['devices']['device'] if 'serialNumber' in x ]
 
 
-    # "I don't want to live on this planet anymore" - Professor Hubert Farnsworth, after dealing with Accept headers in Junos Space
     #Putting this outside the loop before we look up contract info as theres no need to do it hundreds of times
+    # "I don't want to live on this planet anymore" - Professor Hubert Farnsworth, after dealing with Accept headers in Junos Space
     spaceheaders.update({'Accept': 'application/vnd.juniper.servicenow.device-management.device-contracts+json;version=1'})
 
     for device in devices:
@@ -87,6 +92,7 @@ def main():
         #print r
         #print r.text
 
+        #Match the contracts up to the devices
         serviceNowDevice = filter(lambda x: x['serialNumber'] == device['serialNumber'], serviceNowDevices)
         if serviceNowDevice is not []:
             deviceContracts=requests.get(spaceUri+'/api/juniper/servicenow/device-management/devices/' + serviceNowDevice[0]['@key']+ '/viewContractInformation',headers=spaceheaders,verify=False)
